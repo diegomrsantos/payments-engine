@@ -3,7 +3,8 @@
 This guide explains the system from the outside in. It starts with the path a
 CSV record follows, then describes each component and the contracts between
 them. The [README](README.md) remains the place for setup, external behavior,
-and settled assumptions.
+and settled assumptions. The [review guide](REVIEWING.md) provides the reading
+order, test evidence, and verification workflow.
 
 ## Mental model
 
@@ -339,3 +340,6 @@ connections, record sizes, and stream lifetimes according to its own capacity.
 A caller that handles more than one asset must route each asset to a distinct
 engine. Combining assets in one engine would add their amounts without a unit
 distinction because the engine intentionally represents one implicit asset.
+
+For a review order, representative test evidence, and verification commands,
+continue with the [review guide](REVIEWING.md).

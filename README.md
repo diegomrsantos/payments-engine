@@ -6,7 +6,8 @@ transitions, exact arithmetic, and code that can be reviewed without additional
 explanation.
 
 Use the [architecture guide](ARCHITECTURE.md) for the system mental model and
-component collaboration.
+component collaboration. Use the [review guide](REVIEWING.md) for a suggested
+reading order, evidence map, and complete verification commands.
 
 ## Quick start
 
@@ -136,6 +137,9 @@ suite proves that defects are absent. A local mutation audit helped identify
 missing boundary stories during development. For a longer lived system,
 property based testing and recurring mutation analysis could provide additional
 confidence without changing the ledger design.
+
+The [review guide](REVIEWING.md) maps risks to representative tests and provides
+the complete verification set.
 
 ## Development disclosure
 
