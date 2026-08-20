@@ -135,4 +135,8 @@ fn an_inexact_deposit_is_rejected_without_changing_state() {
 
     assert_eq!(result, Err(EngineError::ArithmeticOverflow { client: 1 }));
     assert_eq!(account(&engine, 1), before);
+    assert_eq!(
+        apply(&mut engine, dispute(1, 601)),
+        ApplyOutcome::Ignored(IgnoreReason::UnknownTransaction)
+    );
 }

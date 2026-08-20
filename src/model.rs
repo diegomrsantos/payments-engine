@@ -24,9 +24,33 @@ pub enum Transaction {
         /// Account that supplies the funds.
         client: ClientId,
         /// Identifier from the input transaction.
+        ///
+        /// Withdrawals are not disputable, so the engine does not retain this
+        /// identifier after applying the transaction.
         tx: TransactionId,
         /// Positive amount with at most four decimal places.
         amount: Decimal,
+    },
+    /// Places the funds from a successful deposit on hold.
+    Dispute {
+        /// Account that owns the referenced deposit.
+        client: ClientId,
+        /// Identifier of the referenced deposit.
+        tx: TransactionId,
+    },
+    /// Returns held funds from an active dispute to the available balance.
+    Resolve {
+        /// Account that owns the referenced deposit.
+        client: ClientId,
+        /// Identifier of the referenced deposit.
+        tx: TransactionId,
+    },
+    /// Removes held funds from an active dispute and locks the account.
+    Chargeback {
+        /// Account that owns the referenced deposit.
+        client: ClientId,
+        /// Identifier of the referenced deposit.
+        tx: TransactionId,
     },
 }
 
@@ -35,17 +59,28 @@ pub enum Transaction {
 pub enum ApplyOutcome {
     /// The transaction changed ledger state.
     Applied,
-    /// The requested balance change did not apply.
+    /// The requested balance or dispute transition did not apply.
+    ///
+    /// Some ignored requests can still establish an empty account, as described
+    /// by [`IgnoreReason::InsufficientFunds`].
     Ignored(IgnoreReason),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// Reason that a requested balance change did not apply.
+/// Reason that a requested balance or dispute transition did not apply.
 pub enum IgnoreReason {
     /// The withdrawal exceeded the available balance.
     ///
     /// If the client has no account yet, the withdrawal establishes an empty one.
     InsufficientFunds,
+    /// No disputable deposit has the referenced transaction identifier.
+    UnknownTransaction,
+    /// The control row named a client other than the deposit owner.
+    ClientMismatch,
+    /// The deposit was not in the state required by the control operation.
+    InvalidState,
+    /// A previous chargeback locked the account.
+    AccountLocked,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,12 +88,15 @@ pub enum IgnoreReason {
 pub struct AccountSnapshot {
     /// Client account identifier.
     pub client: ClientId,
-    /// Funds available for withdrawal.
+    /// Balance not held by active disputes; may be negative after a dispute.
     pub available: Decimal,
-    /// Funds held by active disputes.
+    /// Nonnegative funds held by active disputes.
     pub held: Decimal,
     /// Sum of available and held funds, computed rather than stored.
+    ///
+    /// The value may be negative after a chargeback removes disputed funds that
+    /// were already withdrawn.
     pub total: Decimal,
-    /// Whether the account is locked.
+    /// Whether a chargeback locked the account; later valid transactions are ignored.
     pub locked: bool,
 }

@@ -49,3 +49,78 @@ fn insufficient_withdrawal_does_not_change_the_account() {
         Decimal::ZERO
     );
 }
+
+#[test]
+fn held_funds_move_without_changing_total() {
+    let mut account = Account::default();
+    account
+        .deposit(5, money("3.2500"))
+        .expect("deposit should succeed");
+
+    account
+        .hold(5, money("3.2500"))
+        .expect("hold should succeed");
+    let disputed = account.snapshot(5).expect("snapshot should be valid");
+    assert_eq!(disputed.available, Decimal::ZERO);
+    assert_eq!(disputed.held, decimal("3.2500"));
+    assert_eq!(disputed.total, decimal("3.2500"));
+
+    account
+        .release(5, money("3.2500"))
+        .expect("release should succeed");
+    assert_eq!(
+        account
+            .snapshot(5)
+            .expect("snapshot should be valid")
+            .available,
+        decimal("3.2500")
+    );
+}
+
+#[test]
+fn releasing_more_than_the_held_balance_is_rejected_atomically() {
+    let mut account = Account::default();
+    account
+        .deposit(5, money("2.0000"))
+        .expect("deposit should succeed");
+    account
+        .hold(5, money("1.0000"))
+        .expect("hold should succeed");
+    let before = account.snapshot(5).expect("snapshot should be valid");
+
+    let result = account.release(5, money("2.0000"));
+
+    assert_eq!(result, Err(EngineError::InvariantViolation { client: 5 }));
+    assert_eq!(
+        account.snapshot(5).expect("snapshot should be valid"),
+        before
+    );
+}
+
+#[test]
+fn chargeback_can_leave_a_negative_total_and_locks_the_account() {
+    let mut account = Account::default();
+    account
+        .deposit(9, money("5.0000"))
+        .expect("deposit should succeed");
+    account
+        .withdraw(9, money("4.2500"))
+        .expect("withdrawal should succeed");
+    account
+        .hold(9, money("5.0000"))
+        .expect("hold should succeed");
+    account
+        .chargeback(9, money("5.0000"))
+        .expect("chargeback should succeed");
+
+    assert_eq!(
+        account.snapshot(9),
+        Ok(AccountSnapshot {
+            client: 9,
+            available: decimal("-4.2500"),
+            held: Decimal::ZERO,
+            total: decimal("-4.2500"),
+            locked: true,
+        })
+    );
+}

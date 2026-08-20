@@ -1,5 +1,6 @@
 use super::*;
 
+mod disputes;
 mod transactions;
 
 fn decimal(value: &str) -> Decimal {
@@ -20,6 +21,18 @@ fn withdrawal(client: ClientId, tx: TransactionId, amount: &str) -> Transaction 
         tx,
         amount: decimal(amount),
     }
+}
+
+fn dispute(client: ClientId, tx: TransactionId) -> Transaction {
+    Transaction::Dispute { client, tx }
+}
+
+fn resolve(client: ClientId, tx: TransactionId) -> Transaction {
+    Transaction::Resolve { client, tx }
+}
+
+fn chargeback(client: ClientId, tx: TransactionId) -> Transaction {
+    Transaction::Chargeback { client, tx }
 }
 
 fn apply(engine: &mut Engine, transaction: Transaction) -> ApplyOutcome {
