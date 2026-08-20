@@ -1,0 +1,24 @@
+[graph]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+
+[advisories]
+yanked = "deny"
+unmaintained = "workspace"
+unsound = "all"
+ignore = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[[bans.features]]
+crate = "rust_decimal"
+deny = ["rkyv", "rkyv-safe"]
+reason = "Archived representations are outside the ledger data model."
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
