@@ -1,4 +1,4 @@
-use payments_engine::{Engine, Transaction};
+use payments_engine::{AccountSnapshot, Engine, Transaction};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use std::thread;
@@ -8,7 +8,7 @@ fn decimal(value: &str) -> Decimal {
 }
 
 #[test]
-fn every_transaction_step_preserves_the_account_total_invariant() {
+fn a_complete_dispute_story_preserves_the_total_invariant_after_each_step() {
     let story = [
         Transaction::Deposit {
             client: 1,
@@ -44,7 +44,7 @@ fn every_transaction_step_preserves_the_account_total_invariant() {
 }
 
 #[test]
-fn exact_decimal_arithmetic_has_no_binary_float_drift() {
+fn fractional_deposits_and_withdrawals_produce_an_exact_balance() {
     let mut engine = Engine::new();
     engine
         .apply(Transaction::Deposit {
@@ -75,7 +75,9 @@ fn exact_decimal_arithmetic_has_no_binary_float_drift() {
 }
 
 #[test]
-fn independent_engines_can_process_on_worker_threads_without_shared_state() {
+fn separate_engines_are_send_and_keep_state_isolated_across_threads() {
+    // This assertion is checked by the compiler and documents that an Engine
+    // owns all state needed to move between worker threads.
     assert_send::<Engine>();
 
     let first = thread::spawn(|| engine_with_deposit(1, 100, "2.5000"));
@@ -85,12 +87,24 @@ fn independent_engines_can_process_on_worker_threads_without_shared_state() {
     let second = second.join().expect("second worker should finish");
 
     assert_eq!(
-        first.accounts().expect("accounts should be valid")[0].total,
-        decimal("2.5000")
+        first.accounts(),
+        Ok(vec![AccountSnapshot {
+            client: 1,
+            available: decimal("2.5000"),
+            held: Decimal::ZERO,
+            total: decimal("2.5000"),
+            locked: false,
+        }])
     );
     assert_eq!(
-        second.accounts().expect("accounts should be valid")[0].total,
-        decimal("7.7500")
+        second.accounts(),
+        Ok(vec![AccountSnapshot {
+            client: 2,
+            available: decimal("7.7500"),
+            held: Decimal::ZERO,
+            total: decimal("7.7500"),
+            locked: false,
+        }])
     );
 }
 

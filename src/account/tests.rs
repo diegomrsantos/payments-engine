@@ -38,16 +38,14 @@ fn deposits_and_withdrawals_preserve_exact_balances() {
 #[test]
 fn insufficient_withdrawal_does_not_change_the_account() {
     let mut account = Account::default();
+    let before = account.snapshot(8).expect("snapshot should be valid");
 
-    assert!(
-        !account
-            .withdraw(8, money("0.5000"))
-            .expect("withdrawal should be valid")
-    );
-    assert_eq!(
-        account.snapshot(8).expect("snapshot should be valid").total,
-        Decimal::ZERO
-    );
+    let withdrawn = account
+        .withdraw(8, money("0.5000"))
+        .expect("withdrawal should be valid");
+
+    assert!(!withdrawn);
+    assert_eq!(account.snapshot(8), Ok(before));
 }
 
 #[test]
@@ -56,25 +54,26 @@ fn held_funds_move_without_changing_total() {
     account
         .deposit(5, money("3.2500"))
         .expect("deposit should succeed");
+    let settled = account.snapshot(5).expect("snapshot should be valid");
 
     account
         .hold(5, money("3.2500"))
         .expect("hold should succeed");
-    let disputed = account.snapshot(5).expect("snapshot should be valid");
-    assert_eq!(disputed.available, Decimal::ZERO);
-    assert_eq!(disputed.held, decimal("3.2500"));
-    assert_eq!(disputed.total, decimal("3.2500"));
+    assert_eq!(
+        account.snapshot(5),
+        Ok(AccountSnapshot {
+            client: 5,
+            available: Decimal::ZERO,
+            held: decimal("3.2500"),
+            total: decimal("3.2500"),
+            locked: false,
+        })
+    );
 
     account
         .release(5, money("3.2500"))
         .expect("release should succeed");
-    assert_eq!(
-        account
-            .snapshot(5)
-            .expect("snapshot should be valid")
-            .available,
-        decimal("3.2500")
-    );
+    assert_eq!(account.snapshot(5), Ok(settled));
 }
 
 #[test]
@@ -109,6 +108,7 @@ fn chargeback_can_leave_a_negative_total_and_locks_the_account() {
     account
         .hold(9, money("5.0000"))
         .expect("hold should succeed");
+
     account
         .chargeback(9, money("5.0000"))
         .expect("chargeback should succeed");

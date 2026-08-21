@@ -28,7 +28,7 @@ fn a_deposit_then_withdrawal_leaves_the_remaining_funds_available() {
 #[test]
 fn withdrawing_the_complete_available_balance_succeeds() {
     let mut engine = Engine::new();
-    apply(&mut engine, deposit(12, 903, "4.1250"));
+    apply_successfully(&mut engine, deposit(12, 903, "4.1250"));
 
     let outcome = apply(&mut engine, withdrawal(12, 904, "4.1250"));
 
@@ -48,7 +48,7 @@ fn withdrawing_the_complete_available_balance_succeeds() {
 #[test]
 fn an_insufficient_withdrawal_is_ignored_without_changing_the_balance() {
     let mut engine = Engine::new();
-    apply(&mut engine, deposit(4, 100, "1.0000"));
+    apply_successfully(&mut engine, deposit(4, 100, "1.0000"));
 
     let outcome = apply(&mut engine, withdrawal(4, 101, "1.0001"));
 
@@ -75,9 +75,9 @@ fn a_first_withdrawal_creates_an_account_even_when_it_is_declined() {
 #[test]
 fn account_snapshots_are_sorted_by_client() {
     let mut engine = Engine::new();
-    apply(&mut engine, deposit(20, 300, "1.0000"));
-    apply(&mut engine, deposit(3, 301, "1.0000"));
-    apply(&mut engine, deposit(11, 302, "1.0000"));
+    apply_successfully(&mut engine, deposit(20, 300, "1.0000"));
+    apply_successfully(&mut engine, deposit(3, 301, "1.0000"));
+    apply_successfully(&mut engine, deposit(11, 302, "1.0000"));
 
     let clients = engine
         .accounts()
@@ -90,7 +90,7 @@ fn account_snapshots_are_sorted_by_client() {
 }
 
 #[test]
-fn invalid_deposit_amount_does_not_create_an_account() {
+fn overprecise_deposit_is_rejected_without_creating_an_account() {
     let mut engine = Engine::new();
 
     let result = engine.apply(deposit(8, 400, "0.00001"));
@@ -107,7 +107,7 @@ fn invalid_deposit_amount_does_not_create_an_account() {
 #[test]
 fn duplicate_deposit_ids_are_rejected_without_changing_balances() {
     let mut engine = Engine::new();
-    apply(&mut engine, deposit(1, 500, "2.0000"));
+    apply_successfully(&mut engine, deposit(1, 500, "2.0000"));
 
     let result = engine.apply(deposit(2, 500, "8.0000"));
 
@@ -123,9 +123,9 @@ fn duplicate_deposit_ids_are_rejected_without_changing_balances() {
 }
 
 #[test]
-fn an_inexact_deposit_is_rejected_without_changing_state() {
+fn deposit_that_would_make_the_balance_unrepresentable_is_rejected_atomically() {
     let mut engine = Engine::new();
-    apply(
+    apply_successfully(
         &mut engine,
         deposit(1, 600, "792281625142643375935439503.5"),
     );

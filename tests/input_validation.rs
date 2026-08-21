@@ -58,13 +58,15 @@ fn an_amount_cannot_have_two_decimal_points() {
 }
 
 #[test]
-fn an_amount_must_be_positive() {
-    let input = concat!("type,client,tx,amount\n", "deposit,1,100,.0000\n",);
+fn nonpositive_amounts_are_rejected() {
+    for amount in [".0000", "-1.0000"] {
+        let input = format!("type,client,tx,amount\ndeposit,1,100,{amount}\n");
 
-    let error = rejected_without_output(input);
+        let error = rejected_without_output(&input);
 
-    assert!(matches!(error, ProcessError::Apply { row: 2, .. }));
-    assert!(error.to_string().contains("amount must be positive"));
+        assert!(matches!(error, ProcessError::Apply { row: 2, .. }));
+        assert!(error.to_string().contains("amount must be positive"));
+    }
 }
 
 #[test]
@@ -78,6 +80,8 @@ fn an_amount_may_have_at_most_four_decimal_places() {
 
 #[test]
 fn a_large_overprecise_amount_is_rejected_without_rounding() {
+    // The fifth fractional digit is significant and must not disappear while
+    // the large mantissa is normalized for decimal parsing.
     let input = concat!(
         "type,client,tx,amount\n",
         "deposit,1,100,10000000000000.00001\n",
@@ -108,19 +112,28 @@ fn an_account_balance_that_cannot_grow_exactly_is_rejected() {
 }
 
 #[test]
-fn identifiers_must_fit_their_declared_integer_types() {
-    let input = concat!("type,client,tx,amount\n", "deposit,70000,100,1.0000\n",);
+fn out_of_range_client_and_transaction_ids_are_rejected() {
+    for row in ["deposit,65536,100,1.0000", "deposit,1,4294967296,1.0000"] {
+        let input = format!("type,client,tx,amount\n{row}\n");
 
-    let error = rejected_without_output(input);
+        let error = rejected_without_output(&input);
 
-    assert!(matches!(error, ProcessError::ReadRow { row: 2, .. }));
+        assert!(matches!(error, ProcessError::ReadRow { row: 2, .. }));
+    }
 }
 
 #[test]
-fn the_input_requires_exactly_the_transaction_headers() {
-    let input = concat!("type,client,transaction,amount\n", "deposit,1,100,1.0000\n",);
+fn headers_must_contain_each_required_column_exactly_once() {
+    for headers in [
+        "type,client,tx",
+        "type,client,tx,amount,note",
+        "type,client,tx,tx",
+        "type,client,transaction,amount",
+    ] {
+        let input = format!("{headers}\n");
 
-    let error = rejected_without_output(input);
+        let error = rejected_without_output(&input);
 
-    assert!(matches!(error, ProcessError::InvalidHeaders { .. }));
+        assert!(matches!(error, ProcessError::InvalidHeaders { .. }));
+    }
 }

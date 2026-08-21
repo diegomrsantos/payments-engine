@@ -41,6 +41,10 @@ fn apply(engine: &mut Engine, transaction: Transaction) -> ApplyOutcome {
         .expect("scenario transaction should be valid")
 }
 
+fn apply_successfully(engine: &mut Engine, transaction: Transaction) {
+    assert_eq!(apply(engine, transaction), ApplyOutcome::Applied);
+}
+
 fn account(engine: &Engine, client: ClientId) -> AccountSnapshot {
     engine
         .accounts()

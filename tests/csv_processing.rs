@@ -7,10 +7,10 @@ fn process(input: &str) -> Result<String, ProcessError> {
 }
 
 #[test]
-fn interleaved_clients_follow_file_order_and_are_sorted_in_output() {
+fn interleaved_clients_are_processed_in_input_order_and_sorted_in_output() {
     let input = concat!(
-        " type , client , tx , amount \n",
-        " deposit , 12 , 901 , 4.1250 \n",
+        "type,client,tx,amount\n",
+        "deposit,12,901,4.1250\n",
         "deposit,7,800,9.5000\n",
         "dispute,7,800,\n",
         "withdrawal,7,700,1.0000\n",
@@ -27,6 +27,24 @@ fn interleaved_clients_follow_file_order_and_are_sorted_in_output() {
             "client,available,held,total,locked\n",
             "7,7.2500,0.0000,7.2500,false\n",
             "12,3.1000,0.0000,3.1000,false\n",
+        )
+    );
+}
+
+#[test]
+fn surrounding_whitespace_in_headers_and_fields_is_ignored() {
+    let input = concat!(
+        " type , client , tx , amount \n",
+        " deposit , 12 , 901 , 4.1250 \n",
+    );
+
+    let output = process(input).expect("surrounding whitespace should be valid");
+
+    assert_eq!(
+        output,
+        concat!(
+            "client,available,held,total,locked\n",
+            "12,4.1250,0.0000,4.1250,false\n",
         )
     );
 }
@@ -78,7 +96,7 @@ fn a_header_only_input_writes_a_header_only_output() {
 }
 
 #[test]
-fn supported_decimal_scales_and_maximum_ids_round_trip() {
+fn supported_decimal_scales_and_maximum_identifiers_are_accepted() {
     let input = concat!(
         "type,client,tx,amount\n",
         "deposit,65535,4294967295,1\n",

@@ -27,7 +27,11 @@ fn the_cli_writes_only_account_csv_to_stdout() {
 
     let output = run_with_file(input);
 
-    assert!(output.status.success());
+    assert!(
+        output.status.success(),
+        "CLI failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert_eq!(
         String::from_utf8(output.stdout).expect("stdout should be UTF-8"),
         concat!(
@@ -72,7 +76,7 @@ fn the_cli_reports_an_input_file_that_cannot_be_opened() {
 }
 
 #[test]
-fn the_cli_formats_large_equivalent_scales_without_panicking() {
+fn the_cli_formats_large_equivalent_scales_exactly() {
     let input = concat!(
         "type,client,tx,amount\n",
         "deposit,5,912,7922816251426433759354395033.5000\n",
@@ -81,7 +85,11 @@ fn the_cli_formats_large_equivalent_scales_without_panicking() {
 
     let output = run_with_file(input);
 
-    assert!(output.status.success());
+    assert!(
+        output.status.success(),
+        "CLI failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert_eq!(
         String::from_utf8(output.stdout).expect("stdout should be UTF-8"),
         concat!(
@@ -96,7 +104,7 @@ fn the_cli_formats_large_equivalent_scales_without_panicking() {
 }
 
 #[test]
-fn the_cli_requires_exactly_one_input_path() {
+fn the_cli_rejects_a_missing_input_path() {
     let output = run(std::iter::empty::<&Path>());
 
     assert_eq!(output.status.code(), Some(2));

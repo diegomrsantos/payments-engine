@@ -46,6 +46,8 @@ fn transaction_amounts_must_be_positive_and_have_at_most_four_places() {
 
 #[test]
 fn arithmetic_rejects_scale_reduction_instead_of_rounding() {
+    // At this magnitude Decimal can retain only one fractional place. Adding
+    // 0.0001 would require rounding away significant digits.
     let largest = money("792281625142643375935439503.5");
     let smallest = money("0.0001");
 
@@ -56,7 +58,7 @@ fn arithmetic_rejects_scale_reduction_instead_of_rounding() {
 }
 
 #[test]
-fn large_values_keep_their_exact_value_at_a_lower_decimal_scale() {
+fn large_internal_value_converts_to_decimal_without_losing_precision() {
     let amount = decimal("792281625142643375935439503.5");
 
     assert_eq!(

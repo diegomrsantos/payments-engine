@@ -2,12 +2,14 @@ use payments_engine::process_csv;
 use std::io::{self, Cursor, Read};
 
 #[test]
-fn transactions_can_arrive_in_small_chunks() {
+fn csv_input_split_across_read_boundaries_is_processed_correctly() {
     let input = concat!(
         "type,client,tx,amount\n",
         "deposit,8,1000,7.1250\n",
         "withdrawal,8,1001,2.0000\n",
     );
+    // A limit of three bytes deliberately cuts through headers, fields, and
+    // row boundaries instead of returning complete CSV records.
     let reader = ChunkedReader::new(input.as_bytes(), 3);
     let mut output = Vec::new();
 
@@ -39,6 +41,7 @@ fn twenty_thousand_withdrawals_produce_an_exact_balance() {
     );
 }
 
+// Generates each withdrawal only when the CSV reader requests more input.
 struct RepeatedWithdrawalReader {
     current_row: Cursor<Vec<u8>>,
     next_withdrawal_tx: u32,

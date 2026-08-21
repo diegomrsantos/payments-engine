@@ -5,6 +5,7 @@ use std::io::{self, Read, Write};
 const READ_FAILURE: &str = "controlled reader failure";
 const WRITE_FAILURE: &str = "controlled writer failure";
 const FLUSH_FAILURE: &str = "controlled flush failure";
+const PARTIAL_HEADER: &[u8] = b"client,avail";
 
 #[test]
 fn a_reader_failure_before_headers_is_reported_without_output() {
@@ -50,9 +51,9 @@ fn a_reader_failure_during_rows_is_reported_without_output() {
 }
 
 #[test]
-fn a_large_output_writer_failure_reports_write_and_can_leave_partial_output() {
+fn writer_failure_during_row_serialization_is_reported_as_write_with_partial_output() {
     let input = deposits_that_fill_the_csv_writer_buffer();
-    let mut writer = WriterThatFailsAfter::new(12);
+    let mut writer = WriterThatFailsAfter::new(PARTIAL_HEADER.len());
 
     let error = process_csv(input.as_bytes(), &mut writer)
         .expect_err("writing the account rows should fail");
@@ -61,13 +62,13 @@ fn a_large_output_writer_failure_reports_write_and_can_leave_partial_output() {
         ProcessError::Write(source) => assert_csv_io_failure(source, WRITE_FAILURE),
         other => panic!("expected an account CSV write error, got {other}"),
     }
-    assert_eq!(writer.written(), b"client,avail");
+    assert_eq!(writer.written(), PARTIAL_HEADER);
 }
 
 #[test]
-fn a_small_output_writer_failure_is_reported_during_final_flush() {
+fn buffered_writer_failure_during_final_flush_is_reported_as_flush() {
     let input = concat!("type,client,tx,amount\n", "deposit,4,399,1.2500\n",);
-    let mut writer = WriterThatFailsAfter::new(12);
+    let mut writer = WriterThatFailsAfter::new(PARTIAL_HEADER.len());
 
     let error = process_csv(input.as_bytes(), &mut writer)
         .expect_err("draining the final CSV buffer should fail");
@@ -76,7 +77,7 @@ fn a_small_output_writer_failure_is_reported_during_final_flush() {
         ProcessError::Flush(source) => assert_io_failure(source, WRITE_FAILURE),
         other => panic!("expected a final CSV flush error, got {other}"),
     }
-    assert_eq!(writer.written(), b"client,avail");
+    assert_eq!(writer.written(), PARTIAL_HEADER);
 }
 
 #[test]
@@ -99,7 +100,8 @@ fn a_flush_failure_is_reported_after_complete_output_was_written() {
 }
 
 fn deposits_that_fill_the_csv_writer_buffer() -> String {
-    // Enough rows make csv::Writer reach the underlying writer before flush.
+    // Enough rows fill the CSV writer's internal buffer, forcing the failure
+    // during row serialization instead of the explicit final flush.
     let mut input = String::from("type,client,tx,amount\n");
     for client in 1_u16..=400 {
         writeln!(input, "deposit,{client},{client},1.0000")
