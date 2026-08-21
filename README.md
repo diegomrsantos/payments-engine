@@ -140,9 +140,3 @@ confidence without changing the ledger design.
 
 The [review guide](REVIEWING.md) maps risks to representative tests and provides
 the complete verification set.
-
-## Development disclosure
-
-Generative AI was used during planning, implementation, and review. A private
-record of the material AI contributions is supplied separately with the
-submission.
