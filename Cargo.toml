@@ -9,6 +9,7 @@ publish = false
 csv = "1.4.0"
 rust_decimal = { version = "1.42.1", default-features = false, features = ["std"] }
 serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.20"
 
 [dev-dependencies]
 tempfile = "3.27.0"

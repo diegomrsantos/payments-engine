@@ -4,13 +4,12 @@
 
 use payments_engine::{ProcessError, process_csv};
 use std::env;
-use std::error::Error;
 use std::ffi::OsString;
-use std::fmt;
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 use std::process::ExitCode;
+use thiserror::Error;
 
 /// Runs the command and maps one diagnostic to the process exit status.
 fn main() -> ExitCode {
@@ -47,14 +46,17 @@ fn run(arguments: impl IntoIterator<Item = OsString>) -> Result<(), CliError> {
 }
 
 /// Failure classes that determine user diagnostics and process exit status.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 enum CliError {
     /// The process did not receive exactly one input path.
+    #[error("usage: {program} <transactions.csv>")]
     Usage { program: String },
     /// The requested input path could not be opened.
+    #[error("could not open {path}: {source}", path = .input.display())]
     Open { input: PathBuf, source: io::Error },
     /// CSV processing failed after the input file was opened.
-    Process(ProcessError),
+    #[error("{0}")]
+    Process(#[source] ProcessError),
 }
 
 impl CliError {
@@ -64,28 +66,6 @@ impl CliError {
         match self {
             Self::Usage { .. } => ExitCode::from(2),
             Self::Open { .. } | Self::Process(_) => ExitCode::FAILURE,
-        }
-    }
-}
-
-impl fmt::Display for CliError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Usage { program } => write!(formatter, "usage: {program} <transactions.csv>"),
-            Self::Open { input, source } => {
-                write!(formatter, "could not open {}: {source}", input.display())
-            }
-            Self::Process(source) => source.fmt(formatter),
-        }
-    }
-}
-
-impl Error for CliError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Usage { .. } => None,
-            Self::Open { source, .. } => Some(source),
-            Self::Process(source) => Some(source),
         }
     }
 }
